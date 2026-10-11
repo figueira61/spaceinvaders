@@ -30,6 +30,10 @@ html { background: var(--bg); }
 [hidden] { display: none !important; }
 .tools { display: flex; gap: 8px; }
 .tools.side { flex-direction: column; align-items: stretch; }
+.tools.left { display: grid; grid-template-columns: auto auto; }
+.tools.left .tbtn { text-align: center; }
+#pauseBtn { grid-column: 1; }
+#pauseBtn:disabled { opacity: 0.45; cursor: default; }
 .tbtn {
   font-family: var(--font-display);
   font-size: 9px;
@@ -166,9 +170,10 @@ button:active { background: var(--crab); color: #04030f; }
 
 <main style="display:contents">
   <div class="bar">
-    <div class="tools">
+    <div class="tools left">
       <a class="tbtn" id="portal" href="https://figueira61.github.io/Templo-do-Retro/">PORTAL</a>
       <button class="tbtn hall" id="hallBtn" type="button" aria-label="Hall of Fame">🏆 HALL</button>
+      <button class="tbtn" id="pauseBtn" type="button" disabled>PAUSA</button>
     </div>
     <div class="tools side">
       <button class="tbtn" id="mute" type="button">SOM: LIGADO</button>
@@ -485,8 +490,8 @@ var RETRO = (function () {
   })();
 
   /* ---------- constants & state ---------- */
-  const CW = 42, RH = 36, COLS = 11, ROWS = 5;
-  const SHIP_Y = 520, GROUND = 562, BUNK_Y = 440, STEP = 6, DROP = 16;
+  const CW = 42, RH = 36, COLS = 9, ROWS = 5;
+  const SHIP_Y = 520, GROUND = 562, BUNK_Y = 440, STEP = 4, DROP = 16;
   const CS = 3, BC = 22, BR = 16, BP = 12;
   const UFO_Y = 62, UFO_W = 48, UFO_H = 21;
   const UFO_TABLE = [300, 100, 100, 50, 150, 100, 50, 100, 150, 50, 100, 100, 50, 150, 100];
@@ -629,7 +634,7 @@ var RETRO = (function () {
   function initWave() {
     aliens = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) aliens.push({ r, c, alive: true });
-    fx = 29; fy = 100 + Math.min(wave - 1, 4) * 14; dir = 1; frame = 0; stepT = 0;
+    fx = 12; fy = 100 + Math.min(wave - 1, 4) * 14; dir = 1; frame = 0; stepT = 0;
     pb = null; abul = []; shootT = 1.2; ufo = null; ufoT = 14;
     bunkers = [];
     const gap = (W - 104 - 4 * BC * CS) / 3;
@@ -729,7 +734,7 @@ var RETRO = (function () {
     if (n === 0) { mode = 'clear'; clearT = 1.8; abul = []; pb = null; ufo = null; return; }
     stepT += dt;
     const wf = Math.max(0.55, 1 - 0.06 * (wave - 1));
-    const interval = (0.03 + 0.55 * (n / (ROWS * COLS))) * wf;
+    const interval = (0.03 + 0.55 * (n / (ROWS * COLS))) * wf * (STEP / 6);
     if (stepT >= interval) { stepT = 0; stepAliens(); if (mode !== 'play') return; }
 
     /* alien fire */
@@ -875,6 +880,7 @@ var RETRO = (function () {
     while (acc >= FIXED_DT && n < 12) { update(FIXED_DT); acc -= FIXED_DT; n++; }
     if (n >= 12) acc = 0;
     draw();
+    syncPauseBtn();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
@@ -885,6 +891,14 @@ var RETRO = (function () {
     if (mode === 'play' || mode === 'clear' || mode === 'dying') { prevMode = mode; mode = 'paused'; }
     else if (mode === 'paused') mode = prevMode;
   }
+  const pauseBtn = document.getElementById('pauseBtn');
+  function syncPauseBtn() {
+    const can = mode === 'play' || mode === 'clear' || mode === 'dying' || mode === 'paused';
+    if (pauseBtn.disabled === can) pauseBtn.disabled = !can;
+    const t = mode === 'paused' ? 'RETOMAR' : 'PAUSA';
+    if (pauseBtn.textContent !== t) pauseBtn.textContent = t;
+  }
+  pauseBtn.addEventListener('click', () => { togglePause(); pauseBtn.blur(); });
   window.addEventListener('keydown', e => {
     if (rtOverlayAberto()) { if (e.key === 'Escape') { rtHall.hidden = true; rtPontos.hidden = true; } return; }
     const k = e.key;
@@ -920,7 +934,7 @@ var RETRO = (function () {
 
   const muteBtn = document.getElementById('mute');
   function toggleMute() { muted = !muted; muteBtn.textContent = muted ? 'SOM: DESLIGADO' : 'SOM: LIGADO'; }
-  muteBtn.addEventListener('click', toggleMute);
+  muteBtn.addEventListener('click', () => { toggleMute(); muteBtn.blur(); });
 
   /* ---------- Login + Hall of Fame (Supabase) ---------- */
   const RT_JOGO = 'invaders';
