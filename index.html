@@ -10,6 +10,7 @@
 <style>
 /* Layout: one centred arcade cabinet column. CRT screen on top, touch pads and the score table underneath. */
 :root {
+  --w: min(680px, max(320px, calc((100vh - 250px) * 0.8667)));
   --bg: #07051a;
   --panel: #0f0b2b;
   --edge: #2a2160;
@@ -28,6 +29,7 @@
 html { background: var(--bg); }
 [hidden] { display: none !important; }
 .tools { display: flex; gap: 8px; }
+.tools.side { flex-direction: column; align-items: stretch; }
 .tbtn {
   font-family: var(--font-display);
   font-size: 9px;
@@ -43,7 +45,7 @@ html { background: var(--bg); }
 .tbtn:hover { background: rgba(39, 240, 255, 0.12); }
 .tbtn.hall { color: var(--ship); border-color: var(--ship); box-shadow: 0 0 8px rgba(255, 232, 74, 0.4); }
 .tbtn.hall:hover { background: rgba(255, 232, 74, 0.12); }
-.rt-barra { width: 100%; max-width: 520px; min-width: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 10px; min-height: 22px; color: var(--dim); }
+.rt-barra { width: 100%; max-width: var(--w); min-width: 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 10px; min-height: 22px; color: var(--dim); }
 .rt-barra b { color: var(--crab); font-weight: 400; }
 .rt-barra button { background: none; border: 0; border-radius: 0; text-decoration: underline; font: inherit; cursor: pointer; padding: 2px 4px; color: var(--crab); }
 .rt-barra button:active { background: none; color: var(--ship); }
@@ -73,7 +75,7 @@ body {
   font-family: var(--font-body);
   font-size: 21px;
   line-height: 1.25;
-  padding-inline: 16px;
+  padding-inline: 10px;
   padding-block: 20px 32px;
   display: flex;
   flex-direction: column;
@@ -83,7 +85,7 @@ body {
 .screen {
   position: relative;
   width: 100%;
-  max-width: 520px;
+  max-width: var(--w);
   aspect-ratio: 520 / 600;
   background: #04030f;
   border-radius: 10px;
@@ -104,10 +106,10 @@ body {
 }
 .bar {
   width: 100%;
-  max-width: 520px;
+  max-width: var(--w);
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px 16px;
   color: var(--dim);
@@ -131,8 +133,8 @@ button {
 button:focus-visible { outline: 3px solid var(--ship); outline-offset: 2px; }
 button:active { background: var(--crab); color: #04030f; }
 #mute { font-size: 9px; padding: 8px 10px; }
-.touch { display: none; width: 100%; max-width: 520px; gap: 10px; }
-.touch button { flex: 1; height: 60px; font-size: 12px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.touch { display: none; width: 100%; max-width: var(--w); gap: 10px; }
+.touch button { flex: 1; height: 96px; font-size: 16px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .touch #bf { flex: 1.6; color: var(--ship); border-color: var(--ship); }
 .touch #bf:active { background: var(--ship); color: #04030f; }
 @media (pointer: coarse) { .touch { display: flex; } }
@@ -166,7 +168,10 @@ button:active { background: var(--crab); color: #04030f; }
       <a class="tbtn" id="portal" href="https://figueira61.github.io/Templo-do-Retro/">PORTAL</a>
       <button class="tbtn hall" id="hallBtn" type="button" aria-label="Hall of Fame">🏆 HALL</button>
     </div>
-    <button id="mute" type="button">SOM: LIGADO</button>
+    <div class="tools side">
+      <button class="tbtn" id="mute" type="button">SOM: LIGADO</button>
+      <button class="tbtn" id="ptsBtn" type="button">TABELA DE PONTOS</button>
+    </div>
   </div>
   <div class="rt-barra"><span id="rt-jog"></span><span id="rt-estado" role="status" aria-live="polite"></span></div>
 
@@ -182,7 +187,6 @@ button:active { background: var(--crab); color: #04030f; }
 
   <div class="bar">
     <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> mover &nbsp; <kbd>ESPAÇO</kbd> disparar &nbsp; <kbd>P</kbd> pausa &nbsp; <kbd>M</kbd> som</span>
-    <button class="tbtn" id="ptsBtn" type="button">TABELA DE PONTOS</button>
   </div>
 
 </main>
