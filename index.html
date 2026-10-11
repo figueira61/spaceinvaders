@@ -93,6 +93,8 @@ body {
   box-shadow: 0 0 0 2px var(--edge), 0 0 34px rgba(39, 240, 255, 0.22), 0 0 90px rgba(255, 61, 242, 0.12);
   outline: none;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .screen canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
 .screen::after {
@@ -134,7 +136,7 @@ button:focus-visible { outline: 3px solid var(--ship); outline-offset: 2px; }
 button:active { background: var(--crab); color: #04030f; }
 #mute { font-size: 9px; padding: 8px 10px; }
 .touch { display: none; width: 100%; max-width: var(--w); gap: 10px; }
-.touch button { flex: 1; height: 96px; font-size: 16px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.touch button { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; flex: 1; height: 96px; font-size: 16px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .touch #bf { flex: 1.6; color: var(--ship); border-color: var(--ship); }
 .touch #bf:active { background: var(--ship); color: #04030f; }
 @media (pointer: coarse) { .touch { display: flex; } }
@@ -344,7 +346,7 @@ var RETRO = (function () {
   const W = 520, H = 600;
   const cv = document.getElementById('game');
   const ctx = cv.getContext('2d');
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
   cv.width = W * dpr; cv.height = H * dpr;
   ctx.scale(dpr, dpr);
 
@@ -485,7 +487,7 @@ var RETRO = (function () {
   /* ---------- constants & state ---------- */
   const CW = 42, RH = 36, COLS = 11, ROWS = 5;
   const SHIP_Y = 520, GROUND = 562, BUNK_Y = 440, STEP = 6, DROP = 16;
-  const CS = 3, BC = 22, BR = 16;
+  const CS = 3, BC = 22, BR = 16, BP = 12;
   const UFO_Y = 62, UFO_W = 48, UFO_H = 21;
   const UFO_TABLE = [300, 100, 100, 50, 150, 100, 50, 100, 150, 50, 100, 100, 50, 150, 100];
   const ufoPoints = n => UFO_TABLE[(((n - 23) % 15) + 15) % 15];
@@ -570,15 +572,26 @@ var RETRO = (function () {
       if (cut) cells[r * BC + c] = 0;
     }
     const cvs = document.createElement('canvas');
-    cvs.width = BC * CS * dpr; cvs.height = BR * CS * dpr;
-    return { x, y, cells, cvs, g: cvs.getContext('2d'), dirty: true };
+    cvs.width = Math.ceil((BC * CS + BP * 2) * dpr); cvs.height = Math.ceil((BR * CS + BP * 2) * dpr);
+    const lay = document.createElement('canvas');
+    lay.width = Math.ceil(BC * CS * dpr); lay.height = Math.ceil(BR * CS * dpr);
+    return { x, y, cells, cvs, g: cvs.getContext('2d'), lay, lg: lay.getContext('2d'), dirty: true };
   }
+  /* O brilho do abrigo é cozinhado aqui, só quando leva um tiro; a cada frame é um drawImage simples. */
   function renderBunker(b) {
+    const lg = b.lg;
+    lg.setTransform(dpr, 0, 0, dpr, 0, 0);
+    lg.clearRect(0, 0, BC * CS, BR * CS);
+    lg.fillStyle = C.octo;
+    for (let y = 0; y < BR; y++) for (let x = 0; x < BC; x++) if (b.cells[y * BC + x]) lg.fillRect(x * CS, y * CS, CS, CS);
     const g = b.g;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, b.cvs.width, b.cvs.height);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, BC * CS, BR * CS);
-    g.fillStyle = C.octo;
-    for (let y = 0; y < BR; y++) for (let x = 0; x < BC; x++) if (b.cells[y * BC + x]) g.fillRect(x * CS, y * CS, CS, CS);
+    g.shadowColor = C.octo; g.shadowBlur = 10;
+    g.drawImage(b.lay, BP, BP, BC * CS, BR * CS);
+    g.shadowBlur = 0;
+    g.drawImage(b.lay, BP, BP, BC * CS, BR * CS);
     b.dirty = false;
   }
   function erode(b, cx, cy, r) {
@@ -589,7 +602,7 @@ var RETRO = (function () {
       }
     }
     b.dirty = true;
-    burst(b.x + cx * CS, b.y + cy * CS, C.octo, 5, 70);
+    burst(b.x + cx * CS, b.y + cy * CS, C.octo, 3, 70);
   }
   function bunkerHit(x, ya, yb, r) {
     const steps = Math.max(1, Math.ceil(Math.abs(yb - ya) / 2));
@@ -695,7 +708,7 @@ var RETRO = (function () {
           if (pb.x > r.x && pb.x < r.x + r.w && pb.y < r.y + r.h && pb.y + 12 > r.y) {
             a.alive = false;
             addScore(rowPts(a.r));
-            burst(r.x + r.w / 2, r.y + r.h / 2, C[rowType(a.r)], 16, 130);
+            burst(r.x + r.w / 2, r.y + r.h / 2, C[rowType(a.r)], 10, 130);
             boom(0.18, 0.09);
             gone = true; break;
           }
@@ -806,11 +819,7 @@ var RETRO = (function () {
   }
   function drawPlay() {
     drawBottom();
-    for (const b of bunkers) {
-      ctx.shadowColor = C.octo; ctx.shadowBlur = 10;
-      ctx.drawImage(b.cvs, b.x, b.y, BC * CS, BR * CS);
-    }
-    ctx.shadowBlur = 0;
+    for (const b of bunkers) ctx.drawImage(b.cvs, b.x - BP, b.y - BP, BC * CS + BP * 2, BR * CS + BP * 2);
     for (const a of aliens) {
       if (!a.alive) continue;
       const s = SPR[rowType(a.r)][frame], r = alienRect(a);
@@ -819,18 +828,20 @@ var RETRO = (function () {
     if (ufo) drawSprite(SPR.ufo, ufo.x, UFO_Y);
     if (mode !== 'dying') drawSprite(SPR.ship, px - SPR.ship.w / 2, SHIP_Y);
     if (pb) {
-      ctx.shadowColor = C.ship; ctx.shadowBlur = 12; ctx.fillStyle = '#fff6b0';
-      ctx.fillRect(pb.x - 1.5, pb.y, 3, 14); ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,232,74,0.28)'; ctx.fillRect(pb.x - 4, pb.y - 3, 8, 20);
+      ctx.fillStyle = '#fff6b0'; ctx.fillRect(pb.x - 1.5, pb.y, 3, 14);
     }
-    ctx.shadowColor = '#ff9bf6'; ctx.shadowBlur = 10; ctx.fillStyle = '#ffd6fb';
+    ctx.fillStyle = 'rgba(255,155,246,0.28)';
+    for (const b of abul) ctx.fillRect(b.x - 5, b.y - 2, 10, 18);
+    ctx.fillStyle = '#ffd6fb';
     for (const b of abul) for (let i = 0; i < 4; i++) ctx.fillRect(b.x + (((i + Math.floor(b.y / 6)) & 1) ? -2 : 1), b.y + i * 3.5, 3, 4);
-    ctx.shadowBlur = 0;
     for (const p of parts) {
-      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
-      ctx.shadowColor = p.color; ctx.shadowBlur = 8; ctx.fillStyle = p.color;
-      ctx.fillRect(p.x, p.y, p.size, p.size);
+      const a = clamp(p.life / p.max, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = a * 0.28; ctx.fillRect(p.x - 2, p.y - 2, p.size + 4, p.size + 4);
+      ctx.globalAlpha = a; ctx.fillRect(p.x, p.y, p.size, p.size);
     }
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
     for (const f of floats) { ctx.globalAlpha = clamp(f.t / 0.5, 0, 1); txt(f.txt, f.x, f.y, 12, f.color, 'center', 10); }
     ctx.globalAlpha = 1;
   }
@@ -854,11 +865,16 @@ var RETRO = (function () {
   }
 
   /* ---------- loop ---------- */
-  let last = 0;
+  /* Simulação em passo fixo: o movimento não depende dos FPS nem salta quando há quebras de fluidez. */
+  const FIXED_DT = 1 / 120;
+  let last = 0, acc = 0;
   function loop(t) {
-    const dt = Math.min(0.033, (t - last) / 1000 || 0);
+    acc += Math.min(0.1, (t - last) / 1000 || 0);
     last = t;
-    update(dt); draw();
+    let n = 0;
+    while (acc >= FIXED_DT && n < 12) { update(FIXED_DT); acc -= FIXED_DT; n++; }
+    if (n >= 12) acc = 0;
+    draw();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
@@ -890,10 +906,14 @@ var RETRO = (function () {
 
   function hold(id, key) {
     const el = document.getElementById(id);
-    const on = e => { e.preventDefault(); audio(); keys[key] = true; if (key === 'fire') startOrFire(); };
+    const on = e => {
+      e.preventDefault(); audio(); keys[key] = true;
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      if (key === 'fire') startOrFire();
+    };
     const off = () => { keys[key] = false; };
     el.addEventListener('pointerdown', on);
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, off));
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => el.addEventListener(ev, off));
     el.addEventListener('contextmenu', e => e.preventDefault());
   }
   hold('bl', 'left'); hold('br', 'right'); hold('bf', 'fire');
