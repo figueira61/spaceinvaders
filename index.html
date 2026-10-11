@@ -136,16 +136,11 @@ button:active { background: var(--crab); color: #04030f; }
 .touch #bf { flex: 1.6; color: var(--ship); border-color: var(--ship); }
 .touch #bf:active { background: var(--ship); color: #04030f; }
 @media (pointer: coarse) { .touch { display: flex; } }
-.rules { width: 100%; max-width: 520px; display: grid; gap: 14px; }
-.rules h2 {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--dim);
-  margin: 0;
-}
+#rt-pontos .rt-caixa { max-width: 440px; text-align: left; }
+#rt-pontos .rt-caixa h2 { text-align: center; }
+#rt-pontos .table { margin-bottom: 14px; }
+#rt-pontos .note { margin-bottom: 12px; }
+.row .pts.multi { font-size: 10px; white-space: normal; max-width: 11ch; line-height: 1.5; }
 .table { display: grid; gap: 2px; }
 .row {
   display: grid;
@@ -187,15 +182,21 @@ button:active { background: var(--crab); color: #04030f; }
 
   <div class="bar">
     <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> mover &nbsp; <kbd>ESPAÇO</kbd> disparar &nbsp; <kbd>P</kbd> pausa &nbsp; <kbd>M</kbd> som</span>
+    <button class="tbtn" id="ptsBtn" type="button">TABELA DE PONTOS</button>
   </div>
 
-  <section class="rules">
-    <h2>Tabela de pontos</h2>
+</main>
+
+<!-- Tabela de pontos -->
+<div id="rt-pontos" class="rt-sobre" hidden>
+  <div class="rt-caixa" role="dialog" aria-label="Tabela de pontos">
+    <h2>TABELA DE PONTOS</h2>
     <div class="table" id="table"></div>
     <p class="note"><b>UFO</b> &nbsp;O valor segue o número de tiros disparados. O 23.º tiro, e depois um em cada 15 (38.º, 53.º, 68.º…), acerta sempre nos 300 pontos. O contador TIROS está no canto do ecrã.</p>
     <p class="note life"><b>VIDA EXTRA</b> &nbsp;Uma nave a mais quando chegas aos 1500 pontos.</p>
-  </section>
-</main>
+    <button type="button" id="rt-pontos-fecha" class="rt-btn principal">FECHAR</button>
+  </div>
+</div>
 
 <!-- Login (nome + PIN) -->
 <div id="rt-login" class="rt-sobre" hidden>
@@ -456,7 +457,7 @@ var RETRO = (function () {
       icon.style.width = (s.c.width / dpr) + 'px';
       icon.style.maxWidth = '64px';
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = name;
-      const p = document.createElement('span'); p.className = 'pts'; p.textContent = pts; p.style.color = col;
+      const p = document.createElement('span'); p.className = 'pts' + (pts.length > 8 ? ' multi' : ''); p.textContent = pts; p.style.color = col;
       p.style.textShadow = '0 0 8px ' + col;
       row.append(icon, nm, p); host.append(row);
     });
@@ -865,7 +866,7 @@ var RETRO = (function () {
     else if (mode === 'paused') mode = prevMode;
   }
   window.addEventListener('keydown', e => {
-    if (rtOverlayAberto()) return;
+    if (rtOverlayAberto()) { if (e.key === 'Escape') { rtHall.hidden = true; rtPontos.hidden = true; } return; }
     const k = e.key;
     if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
     else if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
@@ -900,11 +901,12 @@ var RETRO = (function () {
   /* ---------- Login + Hall of Fame (Supabase) ---------- */
   const RT_JOGO = 'invaders';
   const $ = id => document.getElementById(id);
+  const rtPontos = $('rt-pontos');
   const rtLogin = $('rt-login'), rtHall = $('rt-hall'), rtNome = $('rt-nome'), rtPin = $('rt-pin');
   const rtErro = $('rt-erro'), rtOk = $('rt-ok'), rtOffline = $('rt-offline');
   let rtModo = 'entrar', rtSemRanking = false;
 
-  function rtOverlayAberto() { return !rtLogin.hidden || !rtHall.hidden; }
+  function rtOverlayAberto() { return !rtLogin.hidden || !rtHall.hidden || !rtPontos.hidden; }
   function rtPausa() { keys.left = keys.right = keys.fire = false; if (mode === 'play') togglePause(); }
   function rtAplicaRecorde(best) { if (best > hi) { hi = best; saveHi(); } }
 
@@ -974,6 +976,8 @@ var RETRO = (function () {
   }
   $('hallBtn').addEventListener('click', rtAbreHall);
   $('rt-hall-fecha').addEventListener('click', () => { rtHall.hidden = true; });
+  $('ptsBtn').addEventListener('click', () => { rtPausa(); rtPontos.hidden = false; });
+  $('rt-pontos-fecha').addEventListener('click', () => { rtPontos.hidden = true; });
 
   function rtEnviaPontuacao(pontos) {
     const box = $('rt-estado');
